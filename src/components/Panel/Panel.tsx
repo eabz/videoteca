@@ -1,19 +1,19 @@
 import { Box, type BoxProps } from '@chakra-ui/react'
 
 interface IPanelProps extends BoxProps {
-  children: JSX.Element
-  padding?: number
+  children: React.ReactNode
 }
 
-export function Panel({ padding = 2, width = '300px', children, ...props }: IPanelProps) {
+export function Panel({ p = 5, width = 'full', children, ...props }: IPanelProps) {
   return (
     <Box
-      alignContent="left"
-      backgroundColor="gray.50"
-      borderRadius="lg"
-      boxShadow="base"
-      marginX="auto"
-      padding={padding}
+      bg="bg.surface"
+      rounded="2xl"
+      borderWidth="1px"
+      borderColor="border.subtle"
+      shadow="sm"
+      mx="auto"
+      p={p}
       width={width}
       {...props}
     >

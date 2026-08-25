@@ -1,29 +1,38 @@
 'use client'
 
-import { AddIcon } from '@/components'
 import { Box, IconButton } from '@chakra-ui/react'
-import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { AddIcon } from '@/components/Icons'
 
 export function FloatingButton() {
   const session = useSession()
+  const pathname = usePathname()
 
-  // @ts-ignore
-  return session.data?.admin ? (
-    <Box position="fixed" bottom="5" right="5">
+  if (!session.data?.admin) return null
+  if (pathname === '/add' || pathname.startsWith('/edit')) return null
+
+  return (
+    <Box
+      position="fixed"
+      bottom={{ base: '5', md: '6' }}
+      right={{ base: '4', md: '6' }}
+      zIndex="20"
+      style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <Link href="/add">
         <IconButton
-          aria-label="Add Movie"
-          isRound={true}
-          variant="solid"
-          colorScheme="blue"
-          w="50px"
-          h="50px"
-          boxShadow="md"
-          p="2"
-          icon={<AddIcon />}
-        />
+          aria-label="Agregar película"
+          colorPalette="brand"
+          rounded="full"
+          w={{ base: '52px', md: '56px' }}
+          h={{ base: '52px', md: '56px' }}
+          shadow="lg"
+        >
+          <AddIcon width={22} height={22} />
+        </IconButton>
       </Link>
     </Box>
-  ) : null
+  )
 }

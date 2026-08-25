@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: videoteca-postgres
+    environment:
+      POSTGRES_USER: videoteca
+      POSTGRES_PASSWORD: videoteca
+      POSTGRES_DB: videoteca
+    ports:
+      - "5433:5432"
+    volumes:
+      - videoteca_pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U videoteca -d videoteca"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  app:
+    profiles: ["app"]
+    build: .
+    container_name: videoteca-app
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      AUTH_URL: http://localhost:3000
+      DB_URL: postgresql://videoteca:videoteca@postgres:5432/videoteca
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  videoteca_pgdata:

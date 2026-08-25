@@ -1,81 +1,54 @@
 'use client'
-import { redirect } from '@/actions'
+
+import { Box, Button, Heading, HStack, Input, Spinner, Text, Textarea, VStack } from '@chakra-ui/react'
+import Image from 'next/image'
+import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
+import { AppCheckbox, RadioOptions } from '@/components/FormControls'
+import { ImdbLink } from '@/components/ImdbLink'
+import { Page } from '@/components/Page'
+import { Panel } from '@/components/Panel'
+import { Poster } from '@/components/Poster'
 import { addMovie, useMovie } from '@/hooks'
 import type { Movie } from '@/types'
 import { unixTimestampToDateString } from '@/utils'
-import {
-  Button,
-  Checkbox,
-  HStack,
-  Heading,
-  Input,
-  Radio,
-  RadioGroup,
-  Spinner,
-  Stack,
-  Text,
-  Textarea,
-  VStack
-} from '@chakra-ui/react'
-import { useSession } from 'next-auth/react'
-import Image from 'next/image'
-import { useEffect, useState } from 'react'
 
-export default function Edit({ params }: { params: { id: string } }) {
+const modifiedToRadio = (value: Movie['modified']) => {
+  if (value === 'yes') return '1'
+  if (value === 'unsuitable') return '3'
+  return '2'
+}
+
+const radioToModified = (value: string): Movie['modified'] => {
+  if (value === '1') return 'yes'
+  if (value === '3') return 'unsuitable'
+  return 'no'
+}
+
+export default function Edit() {
   const session = useSession()
-
-  useEffect(() => {
-    if (!session || !session.data) return
-
-    // @ts-ignore
-    if (!session.data.admin) {
-      redirect('/')
-    }
-  }, [session])
-
-  const { data: movie, error, loading } = useMovie(params.id)
+  const router = useRouter()
+  const params = useParams<{ id: string }>()
+  const movieId = params.id
+  const { data: movie, error, loading } = useMovie(movieId)
 
   const [spanishTitle, setSpanishTitle] = useState<string | undefined>(undefined)
-
-  const handleSpanishTitle = (title: string) => {
-    if (title === '') {
-      setSpanishTitle(undefined)
-      return
-    }
-
-    setSpanishTitle(title)
-  }
-
-  const [addToSv, setAddToSv] = useState<boolean>(false)
-
-  const [addToSf, setAddToSf] = useState<boolean>(false)
-
+  const [addToSv, setAddToSv] = useState(false)
+  const [addToSf, setAddToSf] = useState(false)
   const [feedback, setFeedback] = useState<string | undefined>(undefined)
+  const [modified, setModified] = useState<Movie['modified']>('no')
+  const [addedBy, setAddedBy] = useState('cr')
+  const [loadingUpload, setLoadingUpload] = useState(false)
+  const [errorUpload, setErrorUpload] = useState<string | null>(null)
 
-  const handleFeedback = (feedback: string) => {
-    if (feedback === '') {
-      setFeedback(undefined)
-      return
+  useEffect(() => {
+    if (session.status === 'loading') return
+
+    if (session.status === 'unauthenticated' || !session.data?.admin) {
+      router.replace('/')
     }
-
-    setFeedback(feedback)
-  }
-
-  const [modified, setModified] = useState<'yes' | 'no' | 'unsuitable'>('yes')
-
-  const hanldeModifiedChange = (checkbox: string) => {
-    if (checkbox === '1') {
-      setModified('yes')
-    }
-
-    if (checkbox === '2') {
-      setModified('no')
-    }
-
-    if (checkbox === '3') {
-      setModified('unsuitable')
-    }
-  }
+  }, [session, router])
 
   useEffect(() => {
     if (!movie) return
@@ -85,23 +58,27 @@ export default function Edit({ params }: { params: { id: string } }) {
     setAddToSf(movie.sf)
     setFeedback(movie.feedback)
     setModified(movie.modified)
+    setAddedBy(movie.published_by)
   }, [movie])
 
-  const [addedBy, setAddedBy] = useState<string>('cr')
+  const handleSpanishTitle = (title: string) => {
+    setSpanishTitle(title === '' ? undefined : title)
+  }
 
-  const [loadingUpload, setLoadingUpload] = useState(false)
-
-  const [errorUpload, setErrorUpload] = useState(false)
+  const handleFeedback = (value: string) => {
+    setFeedback(value === '' ? undefined : value)
+  }
 
   const handleUpload = async () => {
     if (!movie || !spanishTitle) return
 
     setLoadingUpload(true)
+    setErrorUpload(null)
 
     const newMovie: Movie = {
       countries: movie.countries,
       genres: movie.genres,
-      feedback: feedback,
+      feedback,
       id: movie.id,
       languages: movie.languages,
       modified,
@@ -118,136 +95,172 @@ export default function Edit({ params }: { params: { id: string } }) {
       poster: movie.poster
     }
 
-    const success = await addMovie(newMovie)
-
-    setLoadingUpload(false)
-
-    if (!success) {
-      setErrorUpload(true)
-
-      return
+    try {
+      await addMovie(newMovie)
+      router.replace('/')
+    } catch (err) {
+      setErrorUpload(
+        err instanceof Error ? err.message : 'No se pudo guardar la película. Revisá la información y volvé a intentar.'
+      )
+    } finally {
+      setLoadingUpload(false)
     }
-
-    setErrorUpload(false)
-    redirect('/')
   }
 
   return (
-    <Stack height="calc(100vh - 60px)" width="100vw">
+    <Page title="Editar película" eyebrow="Catálogo">
       {loading ? (
-        <HStack w="full" justifyContent="center" h="calc(100vh - 60px)">
-          <Spinner thickness="4px" speed="0.65s" emptyColor="gray.200" color="blue.500" size="xl" />
+        <HStack w="full" justifyContent="center" minH="40vh">
+          <Spinner color="brand.500" size="xl" />
         </HStack>
       ) : null}
 
       {error ? (
-        <VStack w="full" justifyContent="center" h="calc(90vh - 60px)">
-          <Heading>No existe</Heading>
+        <VStack align="flex-start" gap="2" color="fg.muted">
+          <Heading size="md">No existe</Heading>
           <Text>La película que quieres editar no se encuentra en la base de datos.</Text>
           <Text>Revisa que el ID sea correcto y vuelve a intentar.</Text>
         </VStack>
       ) : null}
 
       {movie ? (
-        <VStack py="5" maxWidth="600px" textAlign="center" mx="auto">
-          <Text fontSize="18px" fontWeight="bold">
-            Título
-          </Text>
-
-          <Text>{movie.original_title}</Text>
-
-          <Text fontSize="18px" fontWeight="bold">
-            Poster
-          </Text>
-          <Image src={movie.poster} width="200" height="100" alt="movie poster" />
-
-          <Text fontSize="18px" fontWeight="bold">
-            Título en Español
-          </Text>
-          <Input
-            colorScheme="blue"
-            maxWidth="300px"
-            defaultValue={spanishTitle}
-            onChange={(e) => handleSpanishTitle(e.target.value)}
-          />
-          <Text fontSize="18px" fontWeight="bold">
-            Año de lanzamiento
-          </Text>
-          <Text>{movie.year}</Text>
-          <Text fontSize="18px" fontWeight="bold">
-            País
-          </Text>
-          <Text>{movie.countries.join(', ')}</Text>
-          <Text fontSize="18px" fontWeight="bold">
-            Género
-          </Text>
-          <Text>{movie.genres.join(', ')}</Text>
-          <Text fontSize="18px" fontWeight="bold">
-            Idiomas
-          </Text>
-          <Text>{movie.languages}</Text>
-          <Text fontSize="18px" fontWeight="bold">
-            Trama
-          </Text>
-          <Text>{movie.plot}</Text>
-          <Text fontSize="18px" fontWeight="bold">
-            Fecha de Publicación
-          </Text>
-          <Text>{unixTimestampToDateString(movie.publish_date)}</Text>
-          <Text fontSize="18px" fontWeight="bold">
-            Tipo
-          </Text>
-          <Text>{movie.type === 'series' ? 'Serie' : movie.type === 'movie' ? 'Película' : movie.type}</Text>
-          <Text fontSize="18px" fontWeight="bold">
-            Editada
-          </Text>
-          <RadioGroup colorScheme="blue" value={modified ? '1' : '2'} onChange={hanldeModifiedChange}>
-            <Stack direction="row">
-              <Radio value="1">Sí</Radio>
-              <Radio value="2">No</Radio>
-              <Radio value="3">Desaconsejable</Radio>
-            </Stack>
-          </RadioGroup>
-          <Text fontSize="18px" fontWeight="bold">
-            Agregada por
-          </Text>
-          <RadioGroup colorScheme="blue" value={addedBy} onChange={setAddedBy}>
-            <Stack direction="row">
-              <Radio value="cr">cr</Radio>
-              <Radio value="dlg">dlg</Radio>
-              <Radio value="dly">dly</Radio>
-            </Stack>
-          </RadioGroup>
-          <Text fontSize="18px" fontWeight="bold">
-            Agregar a listas
-          </Text>
-          <HStack>
-            <Checkbox colorScheme="blue" isChecked={addToSv} onChange={(e) => setAddToSv(e.target.checked)}>
-              Sección de Varones
-            </Checkbox>
-            <Checkbox colorScheme="blue" isChecked={addToSf} onChange={(e) => setAddToSf(e.target.checked)}>
-              Sección de Mujeres
-            </Checkbox>
-          </HStack>
-          <Text fontSize="18px" fontWeight="bold">
-            Comentario
-          </Text>
-          <Textarea
-            colorScheme="blue"
-            maxWidth="400px"
-            defaultValue={feedback}
-            onChange={(e) => handleFeedback(e.target.value)}
-          />
-          <Button colorScheme="blue" my="5" width="150px" onClick={handleUpload} isDisabled={!spanishTitle || !movie}>
-            {loadingUpload ? <Spinner colorScheme="blue" /> : 'Actualizar'}
-          </Button>
-          {errorUpload ? (
-            <Text color="red.600" fontSize="xs">
-              No se pudo subir la pelicula. Revisa que la información sea correcta y vuelve a intentar.
+        <Panel maxW="640px">
+          <VStack py="2" gap="3" textAlign="center" align="center" w="full">
+            <Text fontSize="18px" fontWeight="bold">
+              Título
             </Text>
-          ) : null}
-        </VStack>
+            <Text>{movie.original_title}</Text>
+            <ImdbLink id={movie.id} label="Ver en IMDB" />
+            <Text fontSize="18px" fontWeight="bold">
+              Póster
+            </Text>
+            <Poster
+              id={movie.id}
+              src={movie.poster}
+              alt={`Póster de ${movie.original_title}`}
+              width={160}
+              height={240}
+            />
+            <Text fontSize="18px" fontWeight="bold">
+              Título en Español
+            </Text>
+            <Input
+              colorPalette="brand"
+              maxWidth="300px"
+              w="full"
+              defaultValue={spanishTitle}
+              onChange={(e) => handleSpanishTitle(e.target.value)}
+            />
+            <Text fontSize="18px" fontWeight="bold">
+              Año de lanzamiento
+            </Text>
+            <Text>{movie.year}</Text>
+            <Text fontSize="18px" fontWeight="bold">
+              País
+            </Text>
+            <Text>{movie.countries.join(', ')}</Text>
+            <Text fontSize="18px" fontWeight="bold">
+              Género
+            </Text>
+            <Text>{movie.genres.join(', ')}</Text>
+            <Text fontSize="18px" fontWeight="bold">
+              Idiomas
+            </Text>
+            <Text>{movie.languages.join(', ')}</Text>
+            <Text fontSize="18px" fontWeight="bold">
+              Trama
+            </Text>
+            <Text>{movie.plot}</Text>
+            <Text fontSize="18px" fontWeight="bold">
+              Fecha de Publicación
+            </Text>
+            <Text>{unixTimestampToDateString(movie.publish_date)}</Text>
+            <Text fontSize="18px" fontWeight="bold">
+              Tipo
+            </Text>
+            <Text>{movie.type === 'series' ? 'Serie' : movie.type === 'movie' ? 'Película' : movie.type}</Text>
+            <Text fontSize="18px" fontWeight="bold">
+              Editada
+            </Text>
+            <RadioOptions
+              value={modifiedToRadio(modified)}
+              onChange={(value) => setModified(radioToModified(value))}
+              options={[
+                { value: '1', label: 'Sí' },
+                { value: '2', label: 'No' },
+                { value: '3', label: 'Desaconsejable' }
+              ]}
+            />
+            <Text fontSize="18px" fontWeight="bold">
+              Agregada por
+            </Text>
+            <RadioOptions
+              value={addedBy}
+              onChange={setAddedBy}
+              options={[
+                { value: 'cr', label: 'cr' },
+                { value: 'dlg', label: 'dlg' },
+                { value: 'dly', label: 'dly' }
+              ]}
+            />
+            <Text fontSize="18px" fontWeight="bold">
+              Agregar a listas
+            </Text>
+            <HStack gap="8" flexWrap="wrap" justify="center">
+              <AppCheckbox checked={addToSv} onCheckedChange={setAddToSv}>
+                <Box
+                  as="span"
+                  display="inline-flex"
+                  rounded="lg"
+                  overflow="hidden"
+                  borderWidth="1px"
+                  borderColor="border.subtle"
+                >
+                  <Image src="/lospuentes.jpeg" width={52} height={54} alt="" />
+                </Box>
+              </AppCheckbox>
+              <AppCheckbox checked={addToSf} onCheckedChange={setAddToSf}>
+                <Box
+                  as="span"
+                  display="inline-flex"
+                  rounded="lg"
+                  overflow="hidden"
+                  borderWidth="1px"
+                  borderColor="border.subtle"
+                >
+                  <Image src="/terralta.jpeg" width={52} height={54} alt="" />
+                </Box>
+              </AppCheckbox>
+            </HStack>
+            <Text fontSize="18px" fontWeight="bold">
+              Comentario
+            </Text>
+            <Textarea
+              colorPalette="brand"
+              maxWidth="400px"
+              w="full"
+              defaultValue={feedback}
+              onChange={(e) => handleFeedback(e.target.value)}
+            />
+            <Button
+              colorPalette="brand"
+              my="5"
+              width={{ base: 'full', sm: '180px' }}
+              rounded="xl"
+              onClick={handleUpload}
+              disabled={!spanishTitle || !movie}
+              loading={loadingUpload}
+            >
+              Actualizar
+            </Button>
+            {errorUpload ? (
+              <Text color="red.600" fontSize="xs" maxWidth="500px">
+                {errorUpload}
+              </Text>
+            ) : null}
+          </VStack>
+        </Panel>
       ) : null}
-    </Stack>
+    </Page>
   )
 }

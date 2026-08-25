@@ -1,15 +1,29 @@
-import type { MovieMetadata } from '@/types'
-import { getToken } from 'next-auth/jwt'
 import { type NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/api-auth'
+import { getMovieMetadata, OmdbError } from '@/lib/omdb'
 
-export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
-  const token = await getToken({ req })
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const authResult = await requireAuth()
+  if (authResult.error) return authResult.error
 
-  if (!token) return new NextResponse(JSON.stringify({ error: 'unauthorized' }), { status: 401 })
+  const { id } = await ctx.params
 
-  const request = await fetch(`http://www.omdbapi.com/?apikey=${process.env.OMDB_API_TOKEN}&i=${ctx.params.id}`)
+  try {
+    const metadata = await getMovieMetadata(id)
 
-  const metadata: MovieMetadata = await request.json()
+    return NextResponse.json(metadata, {
+      headers: {
+        'Cache-Control': 'private, max-age=3600'
+      }
+    })
+  } catch (error) {
+    if (error instanceof OmdbError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status })
+    }
 
-  return new NextResponse(JSON.stringify(metadata))
+    return NextResponse.json(
+      { error: 'No se pudo contactar OMDB. Probá de nuevo en un momento.', code: 'unavailable' },
+      { status: 502 }
+    )
+  }
 }

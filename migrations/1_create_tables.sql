@@ -1,6 +1,4 @@
-CREATE DATABASE videoteca;
-
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   admin BOOL NOT NULL,
   hash TEXT NOT NULL,
   salt TEXT NOT NULL,
@@ -8,7 +6,7 @@ CREATE TABLE users (
   username TEXT PRIMARY KEY NOT NULL
 );
 
-CREATE TABLE movies (
+CREATE TABLE IF NOT EXISTS movies (
   countries TEXT[] NOT NULL,
   genres TEXT[] NOT NULL,
   feedback TEXT,

@@ -8,7 +8,7 @@
 # Requirements
 
 - [Bun](https://bun.sh/)
-- [PostgreSQL](https://www.postgresql.org/)
+- [Docker](https://www.docker.com/) (Postgres local)
 
 ## Installing
 
@@ -18,26 +18,27 @@
 git clone https://github.com/eabz/videoteca && cd videoteca
 ```
 
-2. Copy the `.env.example` as `.env` file and modify it with your environment variables.
+2. Copy the `.env.example` as `.env` file and fill `AUTH_SECRET` and `OMDB_API_TOKEN`.
 
-3. Start the app
+3. Start Postgres, apply migrations, and run the app (port 3001)
 
 ```bash
+bun run db:up
+bun run migrate
 bun run start
 ```
 
 ## Docker
 
-1. Download the public docker image
+App y Postgres juntos (puerto 3000):
+
+```bash
+docker compose --profile app up --build
+```
+
+O la imagen publicada, contra un Postgres alcanzable (no `127.0.0.1` desde el contenedor):
 
 ```bash
 docker image pull 0xeabz/videoteca:main
-```
-
-2. Copy the `.env.example` as `.env` file and modify it with your environment variables.
-
-3. Start the docker container
-
-```bash
-docker run --env-file ./.env -p 3000:3000 0xeabz/videoteca:main 
+docker run --env-file ./.env -p 3000:3000 0xeabz/videoteca:main
 ```

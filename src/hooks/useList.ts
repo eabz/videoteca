@@ -1,29 +1,16 @@
 'use client'
 
-import type { Movie } from '@/types'
 import { useQuery } from '@tanstack/react-query'
+import type { ListScope, Movie } from '@/types'
+import { fetchList } from './useMovie'
 
-async function fetchList(scope: 'lospuentes' | 'terralta'): Promise<Movie[]> {
-  try {
-    const req = await fetch(`/api/list/${scope}`)
-
-    if (req.status !== 200) {
-      throw Error('unable to get movies list')
-    }
-
-    return await req.json()
-  } catch (e) {
-    throw Error('unable to get movies list')
-  }
-}
-
-export function useList(scope: 'lospuentes' | 'terralta'): {
+export function useList(scope: ListScope): {
   data: Movie[] | undefined
   loading: boolean
   error: boolean
 } {
   const { isLoading, isError, data } = useQuery({
-    queryFn: async () => await fetchList(scope),
+    queryFn: () => fetchList(scope),
     queryKey: ['list', scope]
   })
 

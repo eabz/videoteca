@@ -1,15 +1,27 @@
-import { getMovie } from '@/db'
-import { getToken } from 'next-auth/jwt'
 import { type NextRequest, NextResponse } from 'next/server'
+import { getMovie } from '@/db'
+import { requireAuth } from '@/lib/api-auth'
+import { canAccessList } from '@/types'
 
-export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
-  const token = await getToken({ req })
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const authResult = await requireAuth()
+  if (authResult.error) return authResult.error
 
-  if (!token) return new NextResponse(JSON.stringify({ error: 'unauthorized' }), { status: 401 })
+  const { id } = await ctx.params
+  const movie = await getMovie(id)
 
-  const movie = await getMovie(ctx.params.id)
+  if (!movie) {
+    return NextResponse.json({ error: 'movie not found' }, { status: 404 })
+  }
 
-  if (!movie) return new NextResponse(JSON.stringify({ error: 'movie not found' }), { status: 404 })
+  const allowed =
+    authResult.token.scope === 'admin' ||
+    (movie.sv && canAccessList(authResult.token.scope, 'lospuentes')) ||
+    (movie.sf && canAccessList(authResult.token.scope, 'terralta'))
 
-  return new NextResponse(JSON.stringify(movie))
+  if (!allowed) {
+    return NextResponse.json({ error: 'movie not found' }, { status: 404 })
+  }
+
+  return NextResponse.json(movie)
 }

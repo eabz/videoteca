@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.github
+.vscode
+.env
+.env.*
+!.env.example
+*.md
+AGENTS.md
+CLAUDE.md
+coverage
+volumes
+docker-compose.yml
+agent-transcripts

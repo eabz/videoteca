@@ -1,10 +1,13 @@
 {
+  "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
     "maxSize": 10485760,
-    "ignore": ["node_modules", ".next"]
-  },
-  "organizeImports": {
-    "enabled": true
+    "includes": ["**", "!**/node_modules", "!**/.next", "!**/bun.lockb"]
   },
   "formatter": {
     "enabled": true,
@@ -23,13 +26,21 @@
   "linter": {
     "enabled": true,
     "rules": {
+      "recommended": true,
       "suspicious": {
         "noArrayIndexKey": "off"
       },
       "correctness": {
         "noUnusedImports": "error"
-      },
-      "recommended": true
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
     }
   }
 }

@@ -44,7 +44,9 @@ export function abbreviatedDateStringToTimestamp(dateString: string): number {
 
   const month = monthAbbreviations[monthStr]
 
-  const date = new Date(Number.parseInt(year), month, Number.parseInt(day))
+  if (month === undefined) return 0
+
+  const date = new Date(Number.parseInt(year, 10), month, Number.parseInt(day, 10))
 
   return Math.floor(date.getTime() / 1000)
 }

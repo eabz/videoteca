@@ -1,12 +1,15 @@
 import { z } from 'zod'
 
+export const MOVIE_TYPES = ['movie', 'series'] as const
+export const MODIFIED_VALUES = ['yes', 'no', 'unsuitable'] as const
+
 export interface Movie {
   countries: string[]
   genres: string[]
-  feedback: string | undefined
+  feedback?: string
   id: string
   languages: string[]
-  modified: 'yes' | 'no' | 'unsuitable'
+  modified: (typeof MODIFIED_VALUES)[number]
   original_title: string
   plot: string
   published_by: string
@@ -14,28 +17,28 @@ export interface Movie {
   publish_date: number
   sf: boolean
   sv: boolean
-  type: 'movie' | 'series'
+  type: (typeof MOVIE_TYPES)[number]
   translated_title: string
   year: number
   poster: string
 }
 
 export const MovieValidator = z.object({
-  countries: z.array(z.string()),
-  genres: z.array(z.string()),
+  countries: z.array(z.string().min(1)).min(1),
+  genres: z.array(z.string().min(1)).min(1),
   feedback: z.string().optional(),
-  id: z.string(),
-  languages: z.array(z.string()),
-  modified: z.string(),
-  original_title: z.string(),
-  plot: z.string(),
-  published_by: z.string(),
-  release_date: z.number(),
-  publish_date: z.number(),
+  id: z.string().regex(/^tt\d+$/, 'IMDB id must look like tt1234567'),
+  languages: z.array(z.string().min(1)).min(1),
+  modified: z.enum(MODIFIED_VALUES),
+  original_title: z.string().min(1),
+  plot: z.string().min(1),
+  published_by: z.string().min(1),
+  release_date: z.number().int(),
+  publish_date: z.number().int(),
   sf: z.boolean(),
   sv: z.boolean(),
-  type: z.string(),
-  translated_title: z.string(),
-  year: z.number(),
-  poster: z.string()
+  type: z.enum(MOVIE_TYPES),
+  translated_title: z.string().min(1),
+  year: z.number().int(),
+  poster: z.string().min(1)
 })

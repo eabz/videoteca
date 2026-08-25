@@ -1,302 +1,305 @@
 'use client'
 
-import { redirect } from '@/actions'
+import { Box, Button, HStack, Input, Text, Textarea, VStack } from '@chakra-ui/react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
+import { AppCheckbox, RadioOptions } from '@/components/FormControls'
+import { ImdbLink } from '@/components/ImdbLink'
+import { Page } from '@/components/Page'
+import { Panel } from '@/components/Panel'
+import { Poster } from '@/components/Poster'
 import { addMovie, fetchMovieMetadata } from '@/hooks'
 import type { Movie, MovieMetadata } from '@/types'
-import { abbreviatedDateStringToTimestamp, getCurrentDate } from '@/utils'
-import {
-  Button,
-  Checkbox,
-  HStack,
-  Heading,
-  Input,
-  Radio,
-  RadioGroup,
-  Spinner,
-  Stack,
-  Textarea,
-  VStack
-} from '@chakra-ui/react'
-import { Text } from '@chakra-ui/react'
-import { useSession } from 'next-auth/react'
-import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { getCurrentDate } from '@/utils'
+
+function normalizeImdbId(value: string): string {
+  return value.match(/tt\d+/)?.[0] ?? value.trim()
+}
 
 export default function AddMovie() {
   const session = useSession()
+  const router = useRouter()
 
   const [imdbId, setImdbID] = useState<string | undefined>()
-
   const [loading, setLoading] = useState(false)
-
-  const [error, setError] = useState(false)
-
+  const [error, setError] = useState<string | null>(null)
   const [movieMetadata, setMovieMetadata] = useState<MovieMetadata | undefined>()
+  const [spanishTitle, setSpanishTitle] = useState<string | undefined>()
+  const [addToSv, setAddToSv] = useState(true)
+  const [addToSf, setAddToSf] = useState(true)
+  const [feedback, setFeedback] = useState<string | undefined>(undefined)
+  const [modified, setModified] = useState<'yes' | 'no' | 'unsuitable'>('no')
+  const [checkbox, setCheckbox] = useState('2')
+  const [addedBy, setAddedBy] = useState('cr')
+  const [loadingUpload, setLoadingUpload] = useState(false)
+  const [errorUpload, setErrorUpload] = useState<string | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
 
   useEffect(() => {
-    if (!session || !session.data) return
+    if (session.status === 'loading') return
 
-    // @ts-ignore
-    if (!session.data.admin) {
-      redirect('/')
+    if (session.status === 'unauthenticated' || !session.data?.admin) {
+      router.replace('/')
     }
-  }, [session])
+  }, [session, router])
 
   const handleImdbIDChange = (id: string) => {
-    if (id === '') {
-      setImdbID(undefined)
-      return
-    }
-    setImdbID(id)
+    const normalized = normalizeImdbId(id)
+    setImdbID(normalized === '' ? undefined : normalized)
   }
 
   const fetchImdbMetadata = async () => {
     if (!imdbId) return
-    try {
-      setLoading(true)
 
+    setLoading(true)
+    setError(null)
+    setMovieMetadata(undefined)
+
+    try {
       const metadata = await fetchMovieMetadata(imdbId)
 
       setMovieMetadata(metadata)
-      setLoading(false)
-      setError(false)
       setUploadSuccess(false)
-    } catch (e) {
-      setLoading(false)
-      setError(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cargar la información de la película.')
       setUploadSuccess(false)
+    } finally {
+      setLoading(false)
     }
   }
-
-  const [spanishTitle, setSpanishTitle] = useState<string | undefined>()
 
   const handleSpanishTitle = (title: string) => {
-    if (title === '') {
-      setSpanishTitle(undefined)
-      return
-    }
-
-    setSpanishTitle(title)
+    setSpanishTitle(title === '' ? undefined : title)
   }
 
-  const [addToSv, setAddToSv] = useState<boolean>(true)
-
-  const [addToSf, setAddToSf] = useState<boolean>(true)
-
-  const [feedback, setFeedback] = useState<string | undefined>(undefined)
-
-  const handleFeedback = (feedback: string) => {
-    if (feedback === '') {
-      setFeedback(undefined)
-      return
-    }
-
-    setFeedback(feedback)
+  const handleFeedback = (value: string) => {
+    setFeedback(value === '' ? undefined : value)
   }
 
-  const [modified, setModified] = useState<'yes' | 'no' | 'unsuitable'>('no')
+  const handleModifiedChange = (value: string) => {
+    setCheckbox(value)
 
-  const [checkbox, setCheckbox] = useState<string>('2')
-
-  const hanldeModifiedChange = (checkbox: string) => {
-    setCheckbox(checkbox)
-
-    if (checkbox === '1') {
-      setModified('yes')
-    }
-
-    if (checkbox === '2') {
-      setModified('no')
-    }
-
-    if (checkbox === '3') {
-      setModified('unsuitable')
-    }
+    if (value === '1') setModified('yes')
+    if (value === '2') setModified('no')
+    if (value === '3') setModified('unsuitable')
   }
-
-  const [addedBy, setAddedBy] = useState<string>('cr')
-
-  const [loadingUpload, setLoadingUpload] = useState(false)
-
-  const [errorUpload, setErrorUpload] = useState(false)
-
-  const [uploadSuccess, setUploadSuccess] = useState(false)
 
   const handleUpload = async () => {
-    // @ts-ignore
     if (!movieMetadata || !spanishTitle || !session.data?.id) return
 
     setLoadingUpload(true)
-
-    const year = movieMetadata.Year.split('–')
+    setErrorUpload(null)
 
     const movie: Movie = {
-      countries: movieMetadata.Country.split(',').map((text: string) => text.trim()),
-      genres: movieMetadata.Genre.split(',').map((text: string) => text.trim()),
+      countries: movieMetadata.countries,
+      genres: movieMetadata.genres,
       feedback,
-      id: movieMetadata.imdbID,
-      languages: movieMetadata.Language.split(',').map((text: string) => text.trim()),
+      id: movieMetadata.id,
+      languages: movieMetadata.languages,
       modified,
-      original_title: movieMetadata.Title,
-      plot: movieMetadata.Plot,
+      original_title: movieMetadata.original_title,
+      plot: movieMetadata.plot,
       publish_date: getCurrentDate(),
       published_by: addedBy,
-      release_date: abbreviatedDateStringToTimestamp(movieMetadata.Released),
+      release_date: movieMetadata.release_date,
       sf: addToSf,
       sv: addToSv,
-      type: movieMetadata.Type as 'series' | 'movie',
+      type: movieMetadata.type,
       translated_title: spanishTitle,
-      year: Number.parseInt(year[0]),
-      poster: movieMetadata.Poster
+      year: movieMetadata.year,
+      poster: movieMetadata.poster ?? 'N/A'
     }
 
-    const success = await addMovie(movie)
-
-    setLoadingUpload(false)
-
-    if (!success) {
-      setErrorUpload(true)
-
-      return
+    try {
+      await addMovie(movie)
+      setMovieMetadata(undefined)
+      setUploadSuccess(true)
+    } catch (err) {
+      setErrorUpload(
+        err instanceof Error ? err.message : 'No se pudo guardar la película. Revisá la información y volvé a intentar.'
+      )
+    } finally {
+      setLoadingUpload(false)
     }
-
-    setErrorUpload(false)
-    setMovieMetadata(undefined)
-    setUploadSuccess(true)
   }
 
   return (
-    <Stack height="calc(100vh - 60px)" width="100vw">
-      <HStack width="100%" justifyContent="center">
-        <Heading mt="16" fontSize={{ base: '26px', md: '40px' }}>
-          Agregar película
-        </Heading>
-      </HStack>
-      <VStack py="10">
-        <HStack>
-          <Input
-            colorScheme="blue"
-            placeholder="ID de IMDB"
-            maxWidth="250px"
-            onChange={(e) => handleImdbIDChange(e.target.value)}
-          />
-          <Button w="250px" colorScheme="blue" isDisabled={!imdbId} onClick={fetchImdbMetadata}>
-            {loading ? <Spinner colorScheme="blue" /> : 'Cargar información'}
-          </Button>
-        </HStack>
-
-        {error ? (
-          <Text color="red.600" fontSize="xs">
-            No se pudo cargar la información de la película. Asegurate que el ID es correcto.
-          </Text>
-        ) : null}
-
-        {uploadSuccess ? (
-          <Text color="green.600" fontSize="lg" py="10">
-            La pelicula se agrego correctamente
-          </Text>
-        ) : null}
-
-        {movieMetadata ? (
-          <VStack py="5" maxWidth="600px" textAlign="center">
-            <Text fontSize="18px" fontWeight="bold">
-              Título
-            </Text>
-            <Text>{movieMetadata.Title}</Text>
-            <Text fontSize="18px" fontWeight="bold">
-              Poster
-            </Text>
-            <Image src={movieMetadata.Poster} width="200" height="100" alt="movie poster" />
-            <Text fontSize="18px" fontWeight="bold">
-              Título en Español
-            </Text>
-            <Input colorScheme="blue" maxWidth="300px" onChange={(e) => handleSpanishTitle(e.target.value)} />
-            <Text fontSize="18px" fontWeight="bold">
-              Año de lanzamiento
-            </Text>
-            <Text>{movieMetadata.Year}</Text>
-            <Text fontSize="18px" fontWeight="bold">
-              País
-            </Text>
-            <Text>{movieMetadata.Country}</Text>
-            <Text fontSize="18px" fontWeight="bold">
-              Género
-            </Text>
-            <Text>{movieMetadata.Genre}</Text>
-            <Text fontSize="18px" fontWeight="bold">
-              Idiomas
-            </Text>
-            <Text>{movieMetadata.Language}</Text>
-            <Text fontSize="18px" fontWeight="bold">
-              Trama
-            </Text>
-            <Text>{movieMetadata.Plot}</Text>
-            <Text fontSize="18px" fontWeight="bold">
-              Fecha de Publicación
-            </Text>
-            <Text>{movieMetadata.Released}</Text>
-            <Text fontSize="18px" fontWeight="bold">
-              Tipo
-            </Text>
-            <Text>
-              {movieMetadata.Type === 'series'
-                ? 'Serie'
-                : movieMetadata.Type === 'movie'
-                  ? 'Película'
-                  : movieMetadata.Type}
-            </Text>
-            <Text fontSize="18px" fontWeight="bold">
-              Editada
-            </Text>
-            <RadioGroup colorScheme="blue" value={checkbox} onChange={hanldeModifiedChange}>
-              <Stack direction="row">
-                <Radio value="1">Sí</Radio>
-                <Radio value="2">No</Radio>
-                <Radio value="3">Desaconsejable</Radio>
-              </Stack>
-            </RadioGroup>
-            <Text fontSize="18px" fontWeight="bold">
-              Agregada por
-            </Text>
-            <RadioGroup colorScheme="blue" value={addedBy} onChange={setAddedBy}>
-              <Stack direction="row">
-                <Radio value="cr">cr</Radio>
-                <Radio value="dlg">dlg</Radio>
-                <Radio value="dly">dly</Radio>
-              </Stack>
-            </RadioGroup>
-            <Text fontSize="18px" fontWeight="bold">
-              Agregar a listas
-            </Text>
-            <HStack>
-              <Checkbox colorScheme="blue" defaultChecked onChange={(e) => setAddToSv(e.target.checked)}>
-                Sección de Varones
-              </Checkbox>
-              <Checkbox colorScheme="blue" defaultChecked onChange={(e) => setAddToSf(e.target.checked)}>
-                Sección de Mujeres
-              </Checkbox>
-            </HStack>
-            <Text fontSize="18px" fontWeight="bold">
-              Comentario
-            </Text>
-            <Textarea colorScheme="blue" maxWidth="400px" onChange={(e) => handleFeedback(e.target.value)} />
+    <Page title="Agregar película" eyebrow="Catálogo" align="center">
+      <Panel maxW="640px">
+        <VStack py="2" gap="4">
+          <HStack width="full" flexWrap="wrap" gap="3">
+            <Input
+              colorPalette="brand"
+              placeholder="ID de IMDB"
+              rounded="xl"
+              bg="bg.canvas"
+              flex="1"
+              minW={{ base: 'full', sm: '180px' }}
+              onChange={(e) => handleImdbIDChange(e.target.value)}
+            />
             <Button
-              colorScheme="blue"
-              isDisabled={!movieMetadata || !spanishTitle}
-              my="5"
-              width="150px"
-              onClick={handleUpload}
+              w={{ base: 'full', sm: 'auto' }}
+              minW="180px"
+              colorPalette="brand"
+              rounded="xl"
+              disabled={!imdbId}
+              loading={loading}
+              onClick={fetchImdbMetadata}
             >
-              {loadingUpload ? <Spinner colorScheme="blue" /> : 'Agregar'}
+              Cargar información
             </Button>
-            {errorUpload ? (
-              <Text color="red.600" fontSize="xs">
-                No se pudo subir la pelicula. Revisa que la información sea correcta y vuelve a intentar.
+          </HStack>
+
+          {error ? (
+            <Text color="red.600" fontSize="xs" maxWidth="500px" textAlign="center">
+              {error}
+            </Text>
+          ) : null}
+
+          {uploadSuccess ? (
+            <Text color="green.600" fontSize="lg" py="10">
+              La pelicula se agrego correctamente
+            </Text>
+          ) : null}
+
+          {movieMetadata ? (
+            <VStack py="5" maxWidth="600px" textAlign="center" align="center" w="full">
+              <Text fontSize="18px" fontWeight="bold">
+                Título
               </Text>
-            ) : null}
-          </VStack>
-        ) : null}
-      </VStack>
-    </Stack>
+              <Text>{movieMetadata.original_title}</Text>
+              <ImdbLink id={movieMetadata.id} label="Ver en IMDB" />
+              <Text fontSize="18px" fontWeight="bold">
+                Póster
+              </Text>
+              <Poster
+                id={movieMetadata.id}
+                src={movieMetadata.poster}
+                alt={`Póster de ${movieMetadata.original_title}`}
+                width={160}
+                height={240}
+              />
+              <Text fontSize="18px" fontWeight="bold">
+                Título en Español
+              </Text>
+              <Input
+                colorPalette="brand"
+                maxWidth="300px"
+                w="full"
+                onChange={(e) => handleSpanishTitle(e.target.value)}
+              />
+              <Text fontSize="18px" fontWeight="bold">
+                Año de lanzamiento
+              </Text>
+              <Text>{movieMetadata.year_label}</Text>
+              <Text fontSize="18px" fontWeight="bold">
+                País
+              </Text>
+              <Text>{movieMetadata.countries.join(', ')}</Text>
+              <Text fontSize="18px" fontWeight="bold">
+                Género
+              </Text>
+              <Text>{movieMetadata.genres.join(', ')}</Text>
+              <Text fontSize="18px" fontWeight="bold">
+                Idiomas
+              </Text>
+              <Text>{movieMetadata.languages.join(', ')}</Text>
+              <Text fontSize="18px" fontWeight="bold">
+                Trama
+              </Text>
+              <Text>{movieMetadata.plot}</Text>
+              <Text fontSize="18px" fontWeight="bold">
+                Fecha de Publicación
+              </Text>
+              <Text>{movieMetadata.released_label}</Text>
+              <Text fontSize="18px" fontWeight="bold">
+                Tipo
+              </Text>
+              <Text>{movieMetadata.type === 'series' ? 'Serie' : 'Película'}</Text>
+              <Text fontSize="18px" fontWeight="bold">
+                Editada
+              </Text>
+              <RadioOptions
+                value={checkbox}
+                onChange={handleModifiedChange}
+                options={[
+                  { value: '1', label: 'Sí' },
+                  { value: '2', label: 'No' },
+                  { value: '3', label: 'Desaconsejable' }
+                ]}
+              />
+              <Text fontSize="18px" fontWeight="bold">
+                Agregada por
+              </Text>
+              <RadioOptions
+                value={addedBy}
+                onChange={setAddedBy}
+                options={[
+                  { value: 'cr', label: 'cr' },
+                  { value: 'dlg', label: 'dlg' },
+                  { value: 'dly', label: 'dly' }
+                ]}
+              />
+              <Text fontSize="18px" fontWeight="bold">
+                Agregar a listas
+              </Text>
+              <HStack gap="8" flexWrap="wrap" justify="center">
+                <AppCheckbox defaultChecked onCheckedChange={setAddToSv}>
+                  <Box
+                    as="span"
+                    display="inline-flex"
+                    rounded="lg"
+                    overflow="hidden"
+                    borderWidth="1px"
+                    borderColor="border.subtle"
+                  >
+                    <Image src="/lospuentes.jpeg" width={52} height={54} alt="" />
+                  </Box>
+                </AppCheckbox>
+                <AppCheckbox defaultChecked onCheckedChange={setAddToSf}>
+                  <Box
+                    as="span"
+                    display="inline-flex"
+                    rounded="lg"
+                    overflow="hidden"
+                    borderWidth="1px"
+                    borderColor="border.subtle"
+                  >
+                    <Image src="/terralta.jpeg" width={52} height={54} alt="" />
+                  </Box>
+                </AppCheckbox>
+              </HStack>
+              <Text fontSize="18px" fontWeight="bold">
+                Comentario
+              </Text>
+              <Textarea
+                colorPalette="brand"
+                maxWidth="400px"
+                w="full"
+                onChange={(e) => handleFeedback(e.target.value)}
+              />
+              <Button
+                colorPalette="brand"
+                disabled={!movieMetadata || !spanishTitle}
+                loading={loadingUpload}
+                my="5"
+                width={{ base: 'full', sm: '180px' }}
+                rounded="xl"
+                onClick={handleUpload}
+              >
+                Agregar
+              </Button>
+              {errorUpload ? (
+                <Text color="red.600" fontSize="xs" maxWidth="500px">
+                  {errorUpload}
+                </Text>
+              ) : null}
+            </VStack>
+          ) : null}
+        </VStack>
+      </Panel>
+    </Page>
   )
 }

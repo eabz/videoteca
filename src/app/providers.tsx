@@ -1,35 +1,37 @@
 'use client'
 
-import { FloatingButton, NavBar } from '@/components'
-import { useIsRouteActive } from '@/hooks'
-import { ChakraProvider, extendTheme } from '@chakra-ui/react'
+import { ChakraProvider } from '@chakra-ui/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SessionProvider } from 'next-auth/react'
-
-const queryClient = new QueryClient()
-
-const theme = extendTheme({
-  styles: {
-    global: {
-      body: {
-        color: 'blue.600'
-      }
-    }
-  }
-})
+import { ThemeProvider } from 'next-themes'
+import { useState } from 'react'
+import { FloatingButton, NavBar } from '@/components'
+import { system } from '@/theme'
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const { isAddRouteActive } = useIsRouteActive()
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            retry: 1
+          }
+        }
+      })
+  )
 
   return (
-    <ChakraProvider theme={theme}>
-      <QueryClientProvider client={queryClient}>
-        <SessionProvider>
-          <NavBar />
-          {children}
-          {isAddRouteActive ? null : <FloatingButton />}
-        </SessionProvider>
-      </QueryClientProvider>
+    <ChakraProvider value={system}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
+        <QueryClientProvider client={queryClient}>
+          <SessionProvider>
+            <NavBar />
+            {children}
+            <FloatingButton />
+          </SessionProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ChakraProvider>
   )
 }

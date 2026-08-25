@@ -1,30 +1,30 @@
-export interface MovieMetadata {
-  Title: string
-  Year: string
-  Rated: string
-  Released: string
-  Runtime: string
-  Genre: string
-  Director: string
-  Writer: string
-  Actors: string
-  Plot: string
-  Language: string
-  Country: string
-  Awards: string
-  Poster: string
-  Ratings: {
-    Source: string
-    Value: string
-  }[]
-  Metascore: string
-  imdbRating: string
-  imdbVotes: string
-  imdbID: string
-  Type: string
-  DVD: string
-  BoxOffice: string
-  Production: string
-  Website: string
-  Response: string
+import type { Movie } from './movie'
+
+export type MovieMetadata = Pick<
+  Movie,
+  'id' | 'original_title' | 'year' | 'plot' | 'countries' | 'genres' | 'languages' | 'type' | 'release_date'
+> & {
+  year_label: string
+  released_label: string
+  poster: string | null
+}
+
+export type ApiErrorCode =
+  | 'unauthorized'
+  | 'forbidden'
+  | 'invalid_id'
+  | 'not_configured'
+  | 'invalid_key'
+  | 'rate_limit'
+  | 'not_found'
+  | 'unsupported_type'
+  | 'invalid_response'
+  | 'unavailable'
+  | 'invalid_json'
+  | 'invalid_movie'
+  | 'save_failed'
+
+export interface ApiErrorBody {
+  error: string
+  code?: ApiErrorCode
 }
