@@ -12,7 +12,7 @@
     "format": "biome format --write .",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write --unsafe .",
-    "migrate": "bun ./scripts/migrate.ts",
+    "migrate": "bun ./scripts/migrate.mjs",
     "smoke": "bun ./scripts/smoke.ts",
     "start": "next dev -p 3001 --webpack",
     "typecheck": "tsc --noEmit"
