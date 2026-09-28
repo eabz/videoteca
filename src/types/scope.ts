@@ -13,3 +13,7 @@ export const isListScope = (value: string): value is ListScope => {
 export const canAccessList = (userScope: string | undefined, listScope: ListScope): boolean => {
   return userScope === 'admin' || userScope === listScope
 }
+
+export const homeForScope = (userScope: string | undefined): string => {
+  return userScope && isListScope(userScope) ? `/${userScope}` : '/'
+}

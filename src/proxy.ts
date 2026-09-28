@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { homeForScope } from '@/types'
 
 export const proxy = auth((req) => {
   const path = req.nextUrl.pathname
@@ -8,18 +9,15 @@ export const proxy = auth((req) => {
     return NextResponse.redirect(new URL('/login', req.nextUrl.origin))
   }
 
-  const scope = req.auth.scope
-
-  if ((path.startsWith('/add') || path.startsWith('/edit')) && scope !== 'admin') {
-    return NextResponse.redirect(new URL('/', req.nextUrl.origin))
+  if (req.auth.scope === 'admin') {
+    return NextResponse.next()
   }
 
-  if (path.startsWith('/terralta') && scope !== 'terralta' && scope !== 'admin') {
-    return NextResponse.redirect(new URL('/', req.nextUrl.origin))
-  }
+  // Non-admin users are confined to their own list: no picker, no other list, no add/edit.
+  const home = homeForScope(req.auth.scope)
 
-  if (path.startsWith('/lospuentes') && scope !== 'lospuentes' && scope !== 'admin') {
-    return NextResponse.redirect(new URL('/', req.nextUrl.origin))
+  if (home === '/' || (path !== home && !path.startsWith(`${home}/`))) {
+    return NextResponse.redirect(new URL(home === '/' ? '/login' : home, req.nextUrl.origin))
   }
 
   return NextResponse.next()

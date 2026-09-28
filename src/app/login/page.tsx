@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { useActionState, useEffect, useState } from 'react'
 import { EyeIcon, EyeSlashedIcon } from '@/components'
 import { Panel } from '@/components/Panel'
+import { homeForScope } from '@/types'
 import { loginAction } from './actions'
 
 export default function LogIn() {
@@ -17,9 +18,7 @@ export default function LogIn() {
   useEffect(() => {
     if (session.status !== 'authenticated') return
 
-    if (session.data.scope === 'admin') router.replace('/')
-    if (session.data.scope === 'terralta') router.replace('/terralta')
-    if (session.data.scope === 'lospuentes') router.replace('/lospuentes')
+    router.replace(homeForScope(session.data.scope))
   }, [session, router])
 
   return (

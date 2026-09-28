@@ -2,13 +2,7 @@
 
 import { AuthError } from 'next-auth'
 import { signIn, verifyCredentials } from '@/auth'
-import type { UserScope } from '@/types'
-
-function homeForScope(scope: UserScope | undefined) {
-  if (scope === 'terralta') return '/terralta'
-  if (scope === 'lospuentes') return '/lospuentes'
-  return '/'
-}
+import { homeForScope } from '@/types'
 
 function isNextRedirect(error: unknown) {
   return (

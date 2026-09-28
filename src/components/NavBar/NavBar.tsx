@@ -4,6 +4,7 @@ import { Box, type BoxProps, HStack, Text } from '@chakra-ui/react'
 import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import { HomeIcon, LogoutIcon } from '@/components/Icons'
+import { homeForScope } from '@/types'
 
 function NavCircle({ children, ...props }: BoxProps) {
   return (
@@ -31,6 +32,7 @@ function NavCircle({ children, ...props }: BoxProps) {
 
 export function NavBar() {
   const session = useSession()
+  const home = homeForScope(session.data?.scope)
 
   return (
     <HStack
@@ -48,7 +50,7 @@ export function NavBar() {
       borderColor="#2c2822"
     >
       <HStack gap="1">
-        <Link href="/" aria-label="Inicio">
+        <Link href={home} aria-label="Inicio">
           <NavCircle>
             <HomeIcon width={20} height={20} />
           </NavCircle>
@@ -62,7 +64,7 @@ export function NavBar() {
           pe="2"
           _hover={{ color: '#fffaf4' }}
         >
-          <Link href="/">Videoteca México</Link>
+          <Link href={home}>Videoteca México</Link>
         </Text>
       </HStack>
 
