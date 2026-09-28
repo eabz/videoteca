@@ -8,6 +8,7 @@
     "create-user": "bun ./scripts/create-user.ts",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
+    "dev": "bun run migrate && next dev -p 3001 --webpack",
     "deps": "bunx npm-check-updates -u",
     "format": "biome format --write .",
     "lint": "biome lint .",

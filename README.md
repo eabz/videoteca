@@ -20,12 +20,11 @@ git clone https://github.com/eabz/videoteca && cd videoteca
 
 2. Copy the `.env.example` as `.env` file and fill `AUTH_SECRET` and `OMDB_API_TOKEN`.
 
-3. Start Postgres, apply migrations, and run the app (port 3001)
+3. Start Postgres (skip if `DB_URL` points to a remote database), then run the app on port 3001. `bun run dev` applies pending migrations before starting Next.
 
 ```bash
 bun run db:up
-bun run migrate
-bun run start
+bun run dev
 ```
 
 ## Docker
