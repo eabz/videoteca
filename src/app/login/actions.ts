@@ -4,20 +4,9 @@ import { AuthError } from 'next-auth'
 import { signIn, verifyCredentials } from '@/auth'
 import { homeForScope } from '@/types'
 
-function isNextRedirect(error: unknown) {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'digest' in error &&
-    typeof error.digest === 'string' &&
-    error.digest.startsWith('NEXT_REDIRECT')
-  )
-}
+type LoginState = { error: 'invalid' } | { redirectTo: string } | undefined
 
-export async function loginAction(
-  _prev: { error: 'invalid' } | undefined,
-  formData: FormData
-): Promise<{ error: 'invalid' } | undefined> {
+export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const username = String(formData.get('username') ?? '').trim()
   const password = String(formData.get('password') ?? '')
   const user = await verifyCredentials(username, password)
@@ -25,14 +14,13 @@ export async function loginAction(
   if (!user) return { error: 'invalid' }
 
   try {
-    await signIn('credentials', {
-      username,
-      password,
-      redirectTo: homeForScope(user.scope)
-    })
+    await signIn('credentials', { username, password, redirect: false })
   } catch (error) {
-    if (isNextRedirect(error)) throw error
     if (error instanceof AuthError) return { error: 'invalid' }
     throw error
   }
+
+  // The client does a full navigation so SessionProvider starts with the new session;
+  // a server redirect would leave useSession() unauthenticated until a reload.
+  return { redirectTo: homeForScope(user.scope) }
 }

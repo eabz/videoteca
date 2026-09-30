@@ -21,6 +21,10 @@ export default function LogIn() {
     router.replace(homeForScope(session.data.scope))
   }, [session, router])
 
+  useEffect(() => {
+    if (state && 'redirectTo' in state) window.location.replace(state.redirectTo)
+  }, [state])
+
   return (
     <VStack minH="calc(100vh - 64px)" justify="center" px="4" py="12">
       <Panel maxW="420px" width="full" p={{ base: 6, md: 8 }}>
@@ -72,11 +76,18 @@ export default function LogIn() {
                   {showPassword ? <EyeSlashedIcon boxSize="5" /> : <EyeIcon boxSize="5" />}
                 </IconButton>
               </Box>
-              <Button type="submit" colorPalette="brand" rounded="xl" width="full" loading={pending} mt="2">
+              <Button
+                type="submit"
+                colorPalette="brand"
+                rounded="xl"
+                width="full"
+                loading={pending || (state !== undefined && 'redirectTo' in state)}
+                mt="2"
+              >
                 Entrar
               </Button>
 
-              {state?.error === 'invalid' ? (
+              {state && 'error' in state ? (
                 <Text color="red.700" fontSize="sm" textAlign="center">
                   La información de usuario o la contraseña no son correctas
                 </Text>
